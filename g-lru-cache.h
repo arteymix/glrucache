@@ -56,6 +56,7 @@ GType      g_lru_cache_get_type     (void) G_GNUC_CONST;
 
 GLruCache* g_lru_cache_new          (GHashFunc      hash_func,
                                      GEqualFunc     key_equal_func,
+				     GCopyFunc      key_copy_func,
                                      GLookupFunc    retrieve_func,
                                      GDestroyNotify key_destroy_func,
                                      GDestroyNotify value_destroy_func,

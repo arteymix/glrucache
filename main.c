@@ -29,6 +29,7 @@ main (gint argc, gchar *argv[])
 	
 	GLruCache *cache = g_lru_cache_new (g_str_hash,
 	                                    g_str_equal,
+					    (GCopyFunc)g_strdup,
 	                                    G_LOOKUP_FUNC (lookup),
 	                                    g_free,
 	                                    NULL,
@@ -37,11 +38,9 @@ main (gint argc, gchar *argv[])
 	
 	g_assert (cache != NULL);
 	
-	/* using g_strdup to test key free'ing */
-	
-	gint a = GPOINTER_TO_INT (g_lru_cache_get (cache, g_strdup ("a")));
-	gint b = GPOINTER_TO_INT (g_lru_cache_get (cache, g_strdup ("b")));
-	gint c = GPOINTER_TO_INT (g_lru_cache_get (cache, g_strdup ("c")));
+	gint a = GPOINTER_TO_INT (g_lru_cache_get (cache, "a"));
+	gint b = GPOINTER_TO_INT (g_lru_cache_get (cache, "b"));
+	gint c = GPOINTER_TO_INT (g_lru_cache_get (cache, "c"));
 	
 	g_print ("a = %d\n", a);
 	g_print ("b = %d\n", b);
@@ -65,18 +64,18 @@ bigtest (GLruCache *cache)
 	
 	for (i = 0; i < 2000; i++)
 		g_lru_cache_get (cache, g_strdup_printf ("%d", i)); // ignore key leak for now
-		
+
 	g_assert (g_lru_cache_get_size (cache) == 1024);
 	g_print ("size = %d\n", g_lru_cache_get_size (cache));
 	
 	// should be cache hit
 	g_print ("Expecting cache hit\n");
-	g_lru_cache_get (cache, g_strdup ("1800"));
+	g_lru_cache_get (cache, "1800");
 	g_print ("Check log?\n");
 	
 	// should be miss
 	g_print ("Expecting cache miss\n");
-	g_lru_cache_get (cache, g_strdup ("975"));
+	g_lru_cache_get (cache, "975");
 	g_print ("Check log?\n");
 	
 	g_lru_cache_clear (cache);

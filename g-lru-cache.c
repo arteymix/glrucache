@@ -39,6 +39,7 @@ struct _GLruCachePrivate
 	
 	GHashTable     *hash_table;
 	GEqualFunc      key_equal_func;
+	GCopyFunc       key_copy_func;
 	GList          *newest;
 	GList          *oldest;
 	
@@ -124,6 +125,7 @@ g_lru_cache_evict_n_oldest_locked (GLruCache *self, gint n)
 GLruCache*
 g_lru_cache_new (GHashFunc      hash_func,
                  GEqualFunc     key_equal_func,
+		 GCopyFunc      key_copy_func,
                  GLookupFunc    retrieve_func,
                  GDestroyNotify key_destroy_func,
                  GDestroyNotify value_destroy_func,
@@ -138,6 +140,7 @@ g_lru_cache_new (GHashFunc      hash_func,
 	                                                value_destroy_func);
 	
 	self->priv->key_equal_func = key_equal_func;
+	self->priv->key_copy_func = key_copy_func;
 	self->priv->retrieve_func = retrieve_func;
 	self->priv->user_data = user_data;
 	self->priv->user_destroy_func = user_destroy_func;
@@ -216,7 +219,12 @@ g_lru_cache_get (GLruCache *self, gpointer key)
 
 			value = self->priv->retrieve_func (key, self->priv->user_data);
 			
-			g_hash_table_insert (self->priv->hash_table, key, value);
+			if (self->priv->key_copy_func)
+				g_hash_table_insert (self->priv->hash_table,
+					self->priv->key_copy_func (key, self->priv->user_data),
+					value);
+			else
+				g_hash_table_insert (self->priv->hash_table, key, value);
 			
 			self->priv->newest = g_list_prepend (self->priv->newest, key);
 			
