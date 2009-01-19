@@ -17,6 +17,13 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+/* 
+ * Ideally, you want to use fast_get. This is because we are using a
+ * GStaticRWLock which is indeed slower than a mutex if you have lots of writer
+ * acquisitions. This doesn't make it a true LRU, though, as the oldest
+ * retrieval from strorage is the first item evicted.
+ */
+
 #include "g-lru-cache.h"
 
 #define LRU_CACHE_PRIVATE(object)          \
@@ -28,6 +35,7 @@ struct _GLruCachePrivate
 {
 	GStaticRWLock   rw_lock;
 	guint           max_size;
+	gboolean        fast_get;
 	
 	GHashTable     *hash_table;
 	GEqualFunc      key_equal_func;
@@ -79,6 +87,7 @@ g_lru_cache_init (GLruCache *self)
 	self->priv = LRU_CACHE_PRIVATE (self);
 	
 	self->priv->max_size = 1024;
+	self->priv->fast_get = FALSE;
 	g_static_rw_lock_init (&self->priv->rw_lock);
 }
 
@@ -220,6 +229,37 @@ g_lru_cache_get (GLruCache *self, gpointer key)
 		
 		g_static_rw_lock_writer_unlock (&(self->priv->rw_lock));
 	}
+
+	/* fast_get means that we do not reposition the item to the head
+	 * of the list. it essentially makes the lru, a lru from storage,
+	 * not lru to user.
+	 */
+
+	else if (!self->priv->fast_get &&
+	         !self->priv->key_equal_func (key, self->priv->newest->data))
+	{
+#if DEBUG
+		g_debug ("Making item most recent");
+#endif
+
+		g_static_rw_lock_writer_lock (&(self->priv->rw_lock));
+
+		GList *list = self->priv->newest;
+		GList *tmp;
+		GEqualFunc equal = self->priv->key_equal_func;
+
+		for (tmp = list; tmp; tmp = tmp->next)
+		{
+			if (equal (key, tmp->data))
+			{
+				GList *tmp1 = g_list_remove_link (list, tmp);
+				self->priv->newest = g_list_prepend (tmp1, tmp);
+				break;
+			}
+		}
+
+		g_static_rw_lock_writer_unlock (&(self->priv->rw_lock));
+	}
 	
 	return value;
 }
@@ -270,5 +310,19 @@ g_lru_cache_clear (GLruCache *self)
 	self->priv->newest = NULL;
 	
 	g_static_rw_lock_writer_unlock (&(self->priv->rw_lock));
+}
+
+void
+g_lru_cache_set_fast_get (GLruCache *self, gboolean fast_get)
+{
+	g_return_if_fail (G_IS_LRU_CACHE (self));
+	self->priv->fast_get = fast_get;
+}
+
+gboolean
+g_lru_cache_get_fast_get (GLruCache *self)
+{
+	g_return_val_if_fail (G_IS_LRU_CACHE (self), FALSE);
+	return self->priv->fast_get;
 }
 

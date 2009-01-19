@@ -71,6 +71,9 @@ gpointer   g_lru_cache_get          (GLruCache *self, gpointer key);
 void       g_lru_cache_evict        (GLruCache *self, gpointer key);
 void       g_lru_cache_clear        (GLruCache *self);
 
+gboolean   g_lru_cache_get_fast_get (GLruCache *self);
+void       g_lru_cache_set_fast_get (GLruCache *self, gboolean fast_get);
+
 G_END_DECLS
 
 #endif /* __G_LRU_CACHE_H__ */
