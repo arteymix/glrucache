@@ -123,18 +123,21 @@ g_lru_cache_evict_n_oldest_locked (GLruCache *self, gint n)
 }
 
 GLruCache*
-g_lru_cache_new (GHashFunc      hash_func,
-                 GEqualFunc     key_equal_func,
-		 GCopyFunc      key_copy_func,
-                 GLookupFunc    retrieve_func,
+g_lru_cache_new (GType          key_type,
+                 GCopyFunc      key_copy_func,
                  GDestroyNotify key_destroy_func,
+                 GType          value_type,
+                 GCopyFunc      value_copy_func,
                  GDestroyNotify value_destroy_func,
+                 GHashFunc      key_hash_func,
+                 GEqualFunc     key_equal_func,
+                 GLookupFunc    retrieve_func,
                  gpointer       user_data,
                  GDestroyNotify user_destroy_func)
 {
 	GLruCache *self = g_object_new (G_TYPE_LRU_CACHE, NULL);
 	
-	self->priv->hash_table = g_hash_table_new_full (hash_func,
+	self->priv->hash_table = g_hash_table_new_full (key_hash_func,
 	                                                key_equal_func,
 	                                                key_destroy_func,
 	                                                value_destroy_func);

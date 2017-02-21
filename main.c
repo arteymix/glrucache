@@ -25,14 +25,17 @@ lookup (gpointer key, gpointer user_data)
 gint
 main (gint argc, gchar *argv[])
 {
-	GLruCache *cache = g_lru_cache_new (g_str_hash,
-	                                    g_str_equal,
-					    (GCopyFunc)g_strdup,
+	GLruCache *cache = g_lru_cache_new (G_TYPE_STRING,
+                                      (GCopyFunc)g_strdup,
+                                      g_free,
+                                      G_TYPE_INT,
+                                      NULL,
+                                      NULL,
+                                      (GHashFunc)g_str_hash,
+                                      (GEqualFunc)g_str_equal,
 	                                    G_LOOKUP_FUNC (lookup),
-	                                    g_free,
-	                                    NULL,
-	                                    NULL,
-	                                    NULL);
+                                      NULL,
+                                      NULL);
 	
 	g_assert (cache != NULL);
 	

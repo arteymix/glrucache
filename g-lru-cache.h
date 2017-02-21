@@ -54,12 +54,15 @@ struct _GLruCacheClass
 
 GType      g_lru_cache_get_type     (void) G_GNUC_CONST;
 
-GLruCache* g_lru_cache_new          (GHashFunc      hash_func,
-                                     GEqualFunc     key_equal_func,
-				     GCopyFunc      key_copy_func,
-                                     GLookupFunc    retrieve_func,
+GLruCache* g_lru_cache_new          (GType          key_type,
+                                     GCopyFunc      key_copy_func,
                                      GDestroyNotify key_destroy_func,
+                                     GType          value_type,
+                                     GCopyFunc      value_copy_func,
                                      GDestroyNotify value_destroy_func,
+                                     GHashFunc      key_hash_func,
+                                     GEqualFunc     key_equal_func,
+                                     GLookupFunc    retrieve_func,
                                      gpointer       user_data,
                                      GDestroyNotify user_destroy_func);
 
