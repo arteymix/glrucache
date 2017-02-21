@@ -33,7 +33,7 @@
 
 struct _GLruCachePrivate
 {
-	GStaticRWLock   rw_lock;
+	GRWLock         rw_lock;
 	guint           max_size;
 	gboolean        fast_get;
 	
@@ -89,7 +89,7 @@ g_lru_cache_init (GLruCache *self)
 	
 	self->priv->max_size = 1024;
 	self->priv->fast_get = FALSE;
-	g_static_rw_lock_init (&self->priv->rw_lock);
+	g_rw_lock_init (&self->priv->rw_lock);
 }
 
 static void
@@ -155,14 +155,14 @@ g_lru_cache_set_max_size (GLruCache *self, guint max_size)
 	
 	guint old_max_size = self->priv->max_size;
 	
-	g_static_rw_lock_writer_lock (&(self->priv->rw_lock));
+	g_rw_lock_writer_lock (&(self->priv->rw_lock));
 	
 	self->priv->max_size = max_size;
 	
 	if (old_max_size > max_size)
 		g_lru_cache_evict_n_oldest_locked (self, old_max_size - max_size);
 	
-	g_static_rw_lock_writer_unlock (&(self->priv->rw_lock));
+	g_rw_lock_writer_unlock (&(self->priv->rw_lock));
 }
 
 guint
@@ -186,7 +186,7 @@ g_lru_cache_get (GLruCache *self, gpointer key)
 	
 	gpointer value;
 	
-	g_static_rw_lock_reader_lock (&(self->priv->rw_lock));
+	g_rw_lock_reader_lock (&(self->priv->rw_lock));
 	
 	value = g_hash_table_lookup (self->priv->hash_table, key);
 	
@@ -197,11 +197,11 @@ g_lru_cache_get (GLruCache *self, gpointer key)
 		g_debug ("Cache miss");
 #endif
 	
-	g_static_rw_lock_reader_unlock (&(self->priv->rw_lock));
+	g_rw_lock_reader_unlock (&(self->priv->rw_lock));
 	
 	if (!value)
 	{
-		g_static_rw_lock_writer_lock (&(self->priv->rw_lock));
+		g_rw_lock_writer_lock (&(self->priv->rw_lock));
 		
 		if (!g_hash_table_lookup (self->priv->hash_table, key))
 		{
@@ -235,7 +235,7 @@ g_lru_cache_get (GLruCache *self, gpointer key)
 		else g_debug ("Lost storage race with another thread");
 #endif
 		
-		g_static_rw_lock_writer_unlock (&(self->priv->rw_lock));
+		g_rw_lock_writer_unlock (&(self->priv->rw_lock));
 	}
 
 	/* fast_get means that we do not reposition the item to the head
@@ -250,7 +250,7 @@ g_lru_cache_get (GLruCache *self, gpointer key)
 		g_debug ("Making item most recent");
 #endif
 
-		g_static_rw_lock_writer_lock (&(self->priv->rw_lock));
+		g_rw_lock_writer_lock (&(self->priv->rw_lock));
 
 		GList *list = self->priv->newest;
 		GList *tmp;
@@ -266,7 +266,7 @@ g_lru_cache_get (GLruCache *self, gpointer key)
 			}
 		}
 
-		g_static_rw_lock_writer_unlock (&(self->priv->rw_lock));
+		g_rw_lock_writer_unlock (&(self->priv->rw_lock));
 	}
 	
 	return value;
@@ -280,7 +280,7 @@ g_lru_cache_evict (GLruCache *self, gpointer key)
 	GEqualFunc  equal = self->priv->key_equal_func;
 	GList      *list  = NULL;
 	
-	g_static_rw_lock_writer_lock (&(self->priv->rw_lock));
+	g_rw_lock_writer_lock (&(self->priv->rw_lock));
 	
 	if (equal (key, self->priv->oldest))
 	{
@@ -301,7 +301,7 @@ g_lru_cache_evict (GLruCache *self, gpointer key)
 		}
 	}
 	
-	g_static_rw_lock_writer_unlock (&(self->priv->rw_lock));
+	g_rw_lock_writer_unlock (&(self->priv->rw_lock));
 }
 
 void
@@ -309,7 +309,7 @@ g_lru_cache_clear (GLruCache *self)
 {
 	g_return_if_fail (G_IS_LRU_CACHE (self));
 	
-	g_static_rw_lock_writer_lock (&(self->priv->rw_lock));
+	g_rw_lock_writer_lock (&(self->priv->rw_lock));
 	
 	g_hash_table_remove_all (self->priv->hash_table);
 	g_list_free (self->priv->newest);
@@ -317,7 +317,7 @@ g_lru_cache_clear (GLruCache *self)
 	self->priv->oldest = NULL;
 	self->priv->newest = NULL;
 	
-	g_static_rw_lock_writer_unlock (&(self->priv->rw_lock));
+	g_rw_lock_writer_unlock (&(self->priv->rw_lock));
 }
 
 void

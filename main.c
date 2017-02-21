@@ -25,8 +25,6 @@ lookup (gpointer key, gpointer user_data)
 gint
 main (gint argc, gchar *argv[])
 {
-	g_type_init ();
-	
 	GLruCache *cache = g_lru_cache_new (g_str_hash,
 	                                    g_str_equal,
 					    (GCopyFunc)g_strdup,
